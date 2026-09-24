@@ -13,10 +13,3 @@ services:
         generateValue: true
       - key: AUTH_REFRESH_SECRET
         generateValue: true
-      - key: DATABASE_URL
-        value: "file:./data/dev.db"
-    # We mount a persistent disk so that your SQLite database is not wiped when Render restarts the server!
-    disk:
-      name: sqlite-data
-      mountPath: /opt/render/project/src/prisma/data
-      sizeGB: 1
