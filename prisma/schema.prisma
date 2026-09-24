@@ -3,23 +3,18 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  USER
-  HOST
-  ADMIN
-}
-
 model User {
-  id                String                  @id @default(uuid()) @db.Uuid
-  email             String                  @unique @db.Citext
-  displayName       String                  @map("display_name") @db.VarChar(80)
-  handle            String                  @unique @db.Citext
-  passwordHash      String                  @map("password_hash")
-  role              UserRole                @default(USER)
+  id                String                  @id @default(uuid())
+  phone             String                  @unique
+  email             String?                 @unique
+  displayName       String                  @map("display_name")
+  handle            String                  @unique
+  passwordHash      String?                 @map("password_hash")
+  role              String                  @default("USER")
   emailVerifiedAt   DateTime?               @map("email_verified_at")
   tokenVersion      Int                     @default(0) @map("token_version")
   disabledAt        DateTime?               @map("disabled_at")
@@ -29,13 +24,28 @@ model User {
   verificationTokens EmailVerificationToken[]
   passwordResetTokens PasswordResetToken[]
   auditEvents       AuthAuditEvent[]
+  coins             Int                     @default(0)
+  giftsSent         GiftTransaction[]       @relation("GiftsSent")
+  giftsReceived     GiftTransaction[]       @relation("GiftsReceived")
 
   @@map("users")
 }
 
+model Gift {
+  id          String   @id @default(uuid())
+  name        String
+  cost        Int
+  icon        String   @default("Gift")
+  color       String   @default("text-rose-400")
+  bg          String   @default("from-rose-500/20 to-pink-500/5")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("gifts")
+}
+
 model Session {
-  id               String    @id @default(uuid()) @db.Uuid
-  userId           String    @map("user_id") @db.Uuid
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
   refreshTokenHash String    @unique @map("refresh_token_hash")
   userAgent        String?   @map("user_agent")
   ipHash           String?   @map("ip_hash")
@@ -51,8 +61,8 @@ model Session {
 }
 
 model EmailVerificationToken {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
   tokenHash  String    @unique @map("token_hash")
   expiresAt  DateTime  @map("expires_at")
   consumedAt DateTime? @map("consumed_at")
@@ -64,8 +74,8 @@ model EmailVerificationToken {
 }
 
 model PasswordResetToken {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
   tokenHash  String    @unique @map("token_hash")
   expiresAt  DateTime  @map("expires_at")
   consumedAt DateTime? @map("consumed_at")
@@ -77,15 +87,32 @@ model PasswordResetToken {
 }
 
 model AuthAuditEvent {
-  id        BigInt    @id @default(autoincrement())
-  userId    String?   @map("user_id") @db.Uuid
+  id        Int       @id @default(autoincrement())
+  userId    String?   @map("user_id")
   eventType String    @map("event_type")
   ipHash    String?   @map("ip_hash")
   userAgent String?   @map("user_agent")
-  metadata  Json      @default("{}")
+  metadata  String    @default("{}")
   createdAt DateTime  @default(now()) @map("created_at")
   user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@map("auth_audit_events")
+}
+
+model GiftTransaction {
+  id          String   @id @default(uuid())
+  senderId    String   @map("sender_id")
+  receiverId  String   @map("receiver_id")
+  giftId      String   @map("gift_id")
+  giftName    String   @map("gift_name")
+  cost        Int
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  sender      User     @relation("GiftsSent", fields: [senderId], references: [id])
+  receiver    User     @relation("GiftsReceived", fields: [receiverId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@map("gift_transactions")
 }

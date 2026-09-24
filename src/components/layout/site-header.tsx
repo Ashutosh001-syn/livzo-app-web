@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
@@ -15,6 +16,7 @@ import {
   Sparkles,
   User as UserIcon,
   Video,
+  PhoneCall,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -25,6 +27,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 const navigation = [
   { label: "Home", href: "/", icon: Home },
   { label: "Live", href: "/discover", icon: Radio },
+  { label: "Video Calls", href: "/calls", icon: PhoneCall },
   { label: "Reels", href: "/reels", icon: Video },
   { label: "Audio", href: "/audio-rooms", icon: Sparkles },
   { label: "Events", href: "/events", icon: Compass },
@@ -37,6 +40,7 @@ export function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   const { user, logout, isLoading } = useAuth();
 
@@ -97,16 +101,23 @@ export function SiteHeader() {
           className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 lg:flex"
           aria-label="Main navigation"
         >
-          {navigation.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              prefetch={true}
-              className="rounded-full px-3.5 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-white"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                prefetch={true}
+                className={`rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+                  isActive
+                    ? "bg-white/10 text-white font-medium"
+                    : "text-zinc-400 hover:bg-white/[0.07] hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
@@ -148,6 +159,16 @@ export function SiteHeader() {
                     </div>
 
                     <div className="py-1">
+                      {user.role === "admin" && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                        >
+                          <Crown className="size-4 text-emerald-400" />
+                          Admin Dashboard
+                        </Link>
+                      )}
                       <Link
                         href="/studio"
                         onClick={() => setIsProfileMenuOpen(false)}
@@ -206,16 +227,6 @@ export function SiteHeader() {
               </Link>
             </>
           )}
-
-          <Link href="/#download">
-            <Button
-              variant="secondary"
-              className="h-9 rounded-full border-white/15 px-3.5 text-xs text-zinc-300 hover:text-white"
-            >
-              <Download className="mr-1.5 size-3.5" />
-              App
-            </Button>
-          </Link>
         </div>
 
         <button
@@ -239,17 +250,24 @@ export function SiteHeader() {
             className="overflow-hidden border-t border-white/10 bg-zinc-950/95 lg:hidden"
           >
             <nav className="mx-auto flex max-w-7xl flex-col px-5 pb-6 pt-3 sm:px-8" aria-label="Mobile navigation">
-              {navigation.map(({ label, href, icon: Icon }) => (
-                <Link
-                  key={label}
-                  href={href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-3 border-b border-white/[0.07] py-3.5 text-base text-zinc-300 transition-colors hover:text-white"
-                >
-                  <Icon className="size-4 text-violet-300" />
-                  {label}
-                </Link>
-              ))}
+              {navigation.map(({ label, href, icon: Icon }) => {
+                const isActive = pathname === href;
+                return (
+                  <Link
+                    key={label}
+                    href={href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center gap-3 border-b border-white/[0.07] py-3.5 text-base transition-colors ${
+                      isActive
+                        ? "text-white font-semibold"
+                        : "text-zinc-300 hover:text-white"
+                    }`}
+                  >
+                    <Icon className={`size-4 ${isActive ? "text-cyan-400" : "text-violet-300"}`} />
+                    {label}
+                  </Link>
+                );
+              })}
 
               {!isLoading && user ? (
                 <div className="mt-4 space-y-2 border-t border-white/10 pt-4">

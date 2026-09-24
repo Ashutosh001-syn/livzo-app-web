@@ -9,6 +9,7 @@ import {
   Sparkles,
   UsersRound,
 } from "lucide-react";
+import Link from "next/link";
 
 const features = [
   {
@@ -19,6 +20,7 @@ const features = [
     tone: "from-violet-500/25 to-blue-500/5",
     iconTone: "text-violet-200",
     size: "lg:col-span-2",
+    link: "/discover",
   },
   {
     title: "Video Calls",
@@ -28,6 +30,7 @@ const features = [
     tone: "from-blue-500/25 to-cyan-500/5",
     iconTone: "text-cyan-200",
     size: "",
+    link: "/calls",
   },
   {
     title: "Virtual Gifts",
@@ -108,37 +111,49 @@ export function FeaturesSection() {
           className="mt-10 grid gap-4 md:grid-cols-2 lg:mt-14 lg:grid-cols-4"
         >
           {features.map(
-            ({ title, description, icon: Icon, tone, iconTone, size }) => (
-              <motion.article
-                key={title}
-                variants={reveal}
-                whileHover={{ y: -5, scale: 1.01 }}
-                transition={{ type: "spring", stiffness: 280, damping: 22 }}
-                className={`group relative min-h-[220px] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6 ${size}`}
-              >
-                <div
-                  className={`pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-gradient-to-br ${tone} opacity-80 blur-2xl transition-opacity duration-500 group-hover:opacity-100`}
-                />
-                <div className="relative flex h-full flex-col justify-between">
+            ({ title, description, icon: Icon, tone, iconTone, size, link }) => {
+              const CardContent = (
+                <motion.article
+                  whileHover={{ y: -5, scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 280, damping: 22 }}
+                  className={`group relative min-h-[220px] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6 h-full ${size}`}
+                >
                   <div
-                    className={`flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] ${iconTone}`}
-                  >
-                    <Icon className="size-5" />
-                  </div>
-                  <div className="mt-10">
-                    <div className="flex items-center justify-between gap-4">
-                      <h3 className="text-lg font-medium text-white">
-                        {title}
-                      </h3>
-                      <ArrowUpRight className="size-5 text-zinc-600 transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-white" />
+                    className={`pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-gradient-to-br ${tone} opacity-80 blur-2xl transition-opacity duration-500 group-hover:opacity-100`}
+                  />
+                  <div className="relative flex h-full flex-col justify-between">
+                    <div
+                      className={`flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] ${iconTone}`}
+                    >
+                      <Icon className="size-5" />
                     </div>
-                    <p className="mt-2 max-w-md text-[clamp(14px,1vw,16px)] leading-6 text-zinc-400">
-                      {description}
-                    </p>
+                    <div className="mt-10">
+                      <div className="flex items-center justify-between gap-4">
+                        <h3 className="text-lg font-medium text-white">
+                          {title}
+                        </h3>
+                        <ArrowUpRight className="size-5 text-zinc-600 transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-white" />
+                      </div>
+                      <p className="mt-2 max-w-md text-[clamp(14px,1vw,16px)] leading-6 text-zinc-400">
+                        {description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </motion.article>
-            ),
+                </motion.article>
+              );
+
+              return (
+                <motion.div key={title} variants={reveal} className={size}>
+                  {link ? (
+                    <Link href={link} className="block h-full">
+                      {CardContent}
+                    </Link>
+                  ) : (
+                    CardContent
+                  )}
+                </motion.div>
+              );
+            }
           )}
         </motion.div>
       </div>

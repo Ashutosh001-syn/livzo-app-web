@@ -193,10 +193,10 @@ export function HeroSection() {
             variants={reveal}
             className="mt-[clamp(1.25rem,3vh,2rem)] flex flex-wrap gap-3"
           >
-            <Link href="/#download">
+            <Link href="/reels">
               <Button className="h-11 rounded-xl bg-white px-4 text-sm text-zinc-950 shadow-[0_12px_35px_rgba(255,255,255,0.15)] hover:bg-zinc-200 sm:h-12 sm:px-5 sm:text-base">
-                <Download className="mr-2 size-4" />
-                Download App
+                <Play className="mr-2 size-4" />
+                Watch Live
               </Button>
             </Link>
             <Link href="/studio">

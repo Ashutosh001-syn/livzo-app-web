@@ -69,7 +69,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         }
       }
 
-      router.push(redirectPath);
+      // Admin auto-redirect
+      if (mode === "login" && email === "8888888888" && password === "1234") {
+        router.push("/admin");
+      } else {
+        router.push(redirectPath);
+      }
+      
       router.refresh();
     } catch {
       setGeneralError("An unexpected error occurred. Please try again.");
@@ -168,18 +174,18 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </>
       )}
 
-      {/* Email Input */}
+      {/* Email / Phone Input */}
       <div className="space-y-1.5">
         <label className="block text-xs font-medium text-zinc-300">
-          Email address
+          Phone Number or Email
         </label>
         <div className="group relative flex items-center rounded-xl border border-white/10 bg-black/35 transition-all duration-200 focus-within:border-violet-400 focus-within:bg-black/60 focus-within:ring-2 focus-within:ring-violet-500/30 focus-within:shadow-[0_0_20px_rgba(139,92,246,0.2)]">
           <span className="pointer-events-none pl-3.5 text-zinc-500 transition-colors duration-200 group-focus-within:text-violet-400">
             <Mail className="size-4" />
           </span>
           <input
-            type="email"
-            placeholder="you@example.com"
+            type="text"
+            placeholder="8888888888 or you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -196,10 +202,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         )}
       </div>
 
-      {/* Password Input */}
+      {/* Password / OTP Input */}
       <div className="space-y-1.5">
         <label className="block text-xs font-medium text-zinc-300">
-          Password
+          OTP Code or Password
         </label>
         <div className="group relative flex items-center rounded-xl border border-white/10 bg-black/35 transition-all duration-200 focus-within:border-violet-400 focus-within:bg-black/60 focus-within:ring-2 focus-within:ring-violet-500/30 focus-within:shadow-[0_0_20px_rgba(139,92,246,0.2)]">
           <span className="pointer-events-none pl-3.5 text-zinc-500 transition-colors duration-200 group-focus-within:text-violet-400">

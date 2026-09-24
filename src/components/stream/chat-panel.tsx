@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Gift, Heart, Send, Sparkles, Users, Zap } from "lucide-react";
+import { Gift, Heart, Send, Sparkles, Users, Zap, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useSocket } from "@/components/providers/socket-provider";
 
 interface ChatItem {
   id: string;
@@ -29,78 +30,75 @@ const giftOptions = [
   { id: "sparkles", label: "Galaxy Crown", cost: "1,000", icon: Sparkles, color: "text-fuchsia-300" },
 ];
 
-export function ChatPanel() {
+export function ChatPanel({ isOverlay, roomId = "global" }: { isOverlay?: boolean, roomId?: string }) {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatItem[]>(initialMessages);
+  const { socket, isConnected } = useSocket();
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [floatingGifts, setFloatingGifts] = useState<{ id: number; label: string }[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [chatMessages]);
 
-  // Occasional simulated audience chatter
   useEffect(() => {
-    const audiencePool = [
-      { sender: "neon_rider", text: "Audio visualizer looks insane 🎧" },
-      { sender: "clara_sky", text: "Loving this set so much!" },
-      { sender: "stream_fan99", text: "Drop the playlist link please!" },
-    ];
-    let index = 0;
+    if (!socket || !isConnected) return;
 
-    const interval = setInterval(() => {
-      const sample = audiencePool[index % audiencePool.length];
-      index++;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `aud-${Date.now()}`,
-          sender: sample.sender,
-          role: "user",
-          text: sample.text,
-        },
-      ]);
-    }, 12000);
+    socket.emit("join_room", roomId);
 
-    return () => clearInterval(interval);
-  }, []);
+    const handleMessage = (data: any) => {
+      setChatMessages(prev => [...prev, { id: data.id, message: data.message, from: { identity: data.user } }]);
+    };
+
+    const handleGift = (data: any) => {
+      setChatMessages(prev => [...prev, { id: data.id, message: `[GIFT] ${data.gift}`, from: { identity: data.user } }]);
+    };
+
+    socket.on("receive_message", handleMessage);
+    socket.on("receive_gift", handleGift);
+
+    return () => {
+      socket.off("receive_message", handleMessage);
+      socket.off("receive_gift", handleGift);
+    };
+  }, [socket, isConnected, roomId]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      showToast("Please log in to chat.");
+      return;
+    }
     if (!inputText.trim()) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `usr-${Date.now()}`,
-        sender: user?.handle ?? "guest_viewer",
-        role: (user?.role as "host" | "mod" | "user") ?? "user",
-        text: inputText,
-      },
-    ]);
+    if (socket && isConnected) {
+      socket.emit("send_message", { roomId, message: inputText, user: user.handle });
+    }
     setInputText("");
   };
 
   const handleSendGift = (gift: (typeof giftOptions)[number]) => {
+    if (!user) {
+      showToast("Please log in to send gifts.");
+      return;
+    }
     const giftId = Date.now();
     setFloatingGifts((prev) => [...prev, { id: giftId, label: gift.label }]);
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `gft-${giftId}`,
-        sender: user?.handle ?? "generous_fan",
-        role: "vip",
-        text: `Sent a ${gift.label}! 🎉`,
-        isGift: true,
-        giftIcon: gift.id as "heart" | "zap" | "sparkles",
-      },
-    ]);
+    if (socket && isConnected) {
+      socket.emit("send_gift", { roomId, gift: gift.id, user: user.handle });
+    }
 
     setIsGiftModalOpen(false);
     setTimeout(() => {
@@ -109,7 +107,22 @@ export function ChatPanel() {
   };
 
   return (
-    <aside className="relative flex h-[580px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-xl">
+    <aside className={`relative flex flex-col overflow-hidden ${isOverlay ? 'h-full justify-end bg-transparent pb-4' : 'h-[580px] rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-xl'}`}>
+      {/* Custom Error Toast */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="absolute left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-200 backdrop-blur-xl shadow-2xl"
+          >
+            <AlertCircle className="size-4 text-rose-400" />
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Floating gift screen animation */}
       <AnimatePresence>
         {floatingGifts.map((gift) => (
@@ -130,53 +143,44 @@ export function ChatPanel() {
       </AnimatePresence>
 
       {/* Chat header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-white">
-          <Users className="size-4 text-violet-300" />
-          Live Room Chat
+      {!isOverlay && (
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+            <Users className="size-4 text-violet-300" />
+            Live Room Chat
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => setIsGiftModalOpen(true)}
+            className="h-8 rounded-lg border-fuchsia-500/30 bg-fuchsia-500/15 px-2.5 text-xs text-fuchsia-300 hover:bg-fuchsia-500/25"
+          >
+            <Gift className="mr-1.5 size-3.5" />
+            Send Gift
+          </Button>
         </div>
-        <Button
-          variant="secondary"
-          onClick={() => setIsGiftModalOpen(true)}
-          className="h-8 rounded-lg border-fuchsia-500/30 bg-fuchsia-500/15 px-2.5 text-xs text-fuchsia-300 hover:bg-fuchsia-500/25"
-        >
-          <Gift className="mr-1.5 size-3.5" />
-          Send Gift
-        </Button>
-      </div>
+      )}
 
       {/* Messages list */}
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4 text-xs">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`rounded-xl p-2.5 transition-colors ${
-              msg.isGift
-                ? "border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
-                : "bg-white/[0.025] text-zinc-200"
-            }`}
-          >
-            <div className="flex items-center gap-1.5 font-medium">
-              <span className="font-semibold text-white">@{msg.sender}</span>
-              {msg.role === "host" && (
-                <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-rose-300">
-                  Host
-                </span>
-              )}
-              {msg.role === "mod" && (
-                <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-cyan-300">
-                  Mod
-                </span>
-              )}
-              {msg.role === "vip" && (
-                <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-300">
-                  VIP
-                </span>
-              )}
+      <div ref={scrollRef} className={`flex-1 overflow-y-auto space-y-3 ${isOverlay ? 'p-4 mask-image-top' : 'p-4'} text-xs`} style={{ maskImage: isOverlay ? 'linear-gradient(to top, black 80%, transparent 100%)' : 'none', WebkitMaskImage: isOverlay ? 'linear-gradient(to top, black 80%, transparent 100%)' : 'none' }}>
+        {chatMessages.map((msg) => {
+          const isGift = msg.message.startsWith("[GIFT]");
+          const displayMsg = isGift ? `Sent a gift!` : msg.message;
+          return (
+            <div
+              key={msg.id}
+              className={`rounded-xl p-2.5 transition-colors ${
+                isGift
+                  ? "border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
+                  : "bg-white/[0.025] text-zinc-200"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 font-medium">
+                <span className="font-semibold text-white">@{msg.from?.identity ?? "User"}</span>
+              </div>
+              <p className="mt-1 leading-relaxed text-zinc-300">{displayMsg}</p>
             </div>
-            <p className="mt-1 leading-relaxed text-zinc-300">{msg.text}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Gift drawer popup */}
@@ -217,8 +221,8 @@ export function ChatPanel() {
       </AnimatePresence>
 
       {/* Message input */}
-      <form onSubmit={handleSendMessage} className="border-t border-white/10 p-3">
-        <div className="flex gap-2">
+      <form onSubmit={handleSendMessage} className={`flex gap-2 p-3 ${isOverlay ? '' : 'border-t border-white/10'}`}>
+        <div className="flex flex-1 gap-2">
           <Input
             placeholder="Send a live message..."
             value={inputText}
@@ -233,6 +237,16 @@ export function ChatPanel() {
             <Send className="size-4" />
           </Button>
         </div>
+        {isOverlay && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setIsGiftModalOpen(true)}
+            className="h-10 w-10 shrink-0 rounded-full border-fuchsia-500/30 bg-fuchsia-500/20 p-0 text-fuchsia-300 hover:bg-fuchsia-500/30"
+          >
+            <Gift className="size-5" />
+          </Button>
+        )}
       </form>
     </aside>
   );

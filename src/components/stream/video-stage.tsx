@@ -15,7 +15,7 @@ import {
 import type { LiveStream } from "@/types/stream";
 import { Badge } from "@/components/ui/badge";
 
-export function VideoStage({ stream }: { stream: LiveStream }) {
+export function VideoStage({ stream, isReelMode }: { stream: LiveStream; isReelMode?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isPlaying, setIsPlaying] = useState(true);
@@ -49,7 +49,9 @@ export function VideoStage({ stream }: { stream: LiveStream }) {
       ref={containerRef}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
-      className="group relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-violet-950 via-[#0d0d14] to-blue-950 shadow-2xl"
+      className={`group relative flex w-full items-center justify-center overflow-hidden bg-gradient-to-br from-violet-950 via-[#0d0d14] to-blue-950 shadow-2xl ${
+        isReelMode ? "h-full" : "aspect-video rounded-2xl border border-white/10"
+      }`}
     >
       {/* Dynamic ambient stage glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(139,92,246,0.22),transparent_65%)]" />

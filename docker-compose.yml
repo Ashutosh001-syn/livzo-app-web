@@ -1,0 +1,11 @@
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    # --dev mode automatically uses:
+    # API Key: devkey
+    # API Secret: secret

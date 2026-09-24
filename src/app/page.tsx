@@ -95,52 +95,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Download App Section with id="download" */}
-        <section id="download" className="scroll-mt-24 border-t border-white/[0.08] bg-[#09090e] py-16 sm:py-24">
-          <div className="mx-auto w-full max-w-[1280px] px-[clamp(16px,4vw,48px)]">
-            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-violet-950/40 via-zinc-950 to-blue-950/30 p-8 sm:p-12 lg:p-16 shadow-2xl">
-              <div className="absolute right-0 top-0 -z-0 size-[450px] rounded-full bg-gradient-to-br from-violet-600/20 to-cyan-500/10 blur-[120px]" />
-              
-              <div className="relative z-10 grid items-center gap-8 lg:grid-cols-2">
-                <div>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-cyan-300">
-                    <Smartphone className="size-3.5" />
-                    Mobile First
-                  </span>
-                  <h2 className="mt-4 text-[clamp(32px,3vw,48px)] font-bold tracking-tight text-white">
-                    LivZo in your pocket.
-                    <br />
-                    <span className="bg-gradient-to-r from-violet-300 via-blue-300 to-cyan-200 bg-clip-text text-transparent">
-                      Stream anywhere, anytime.
-                    </span>
-                  </h2>
-                  <p className="mt-4 text-zinc-300 text-[clamp(14px,1vw,17px)] leading-relaxed">
-                    Broadcast directly from your phone in 1080p60, join audio parties with friends, and get instant push alerts when your favorite creators go live.
-                  </p>
 
-                  <div className="mt-8 flex flex-wrap gap-4">
-                    <Button className="h-12 rounded-xl bg-white px-5 text-zinc-950 hover:bg-zinc-200">
-                      <Apple className="mr-2 size-5" />
-                      App Store
-                    </Button>
-                    <Button variant="secondary" className="h-12 rounded-xl border-white/20 bg-white/5 px-5 text-white hover:bg-white/10">
-                      <Download className="mr-2 size-5" />
-                      Google Play
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-black/40 p-8 text-center backdrop-blur-xl">
-                  <div className="flex size-24 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white shadow-inner">
-                    <QrCode className="size-16 text-cyan-300" />
-                  </div>
-                  <p className="mt-4 font-semibold text-white">Scan to install instant app</p>
-                  <p className="mt-1 text-xs text-zinc-400">Compatible with iOS 16+ and Android 11+</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
     </PageFrame>
   );
