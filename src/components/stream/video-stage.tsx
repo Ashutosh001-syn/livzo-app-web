@@ -79,62 +79,26 @@ export function VideoStage({ stream, isReelMode }: { stream: LiveStream; isReelM
         <p className="mt-0.5 text-[11px] text-zinc-400">1080p 60fps · Low Latency Engine</p>
       </div>
 
-      {/* Top Left Live Badge */}
-      <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
-        <Badge className="border-rose-500/40 bg-rose-600/20 text-rose-200 backdrop-blur-md">
-          <Radio className="mr-1.5 size-3 animate-pulse text-rose-400" />
-          LIVE · {viewers.toLocaleString()} watching
-        </Badge>
-      </div>
-
-      {/* Bottom Player Overlay Bar */}
-      <div
-        className={`absolute inset-x-0 bottom-0 z-20 flex items-center justify-between bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 transition-opacity duration-200 ${
-          showControls || !isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="flex size-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? <Pause className="size-4" /> : <Play className="size-4 ml-0.5 fill-current" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsMuted(!isMuted)}
-            className="flex size-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-            aria-label={isMuted ? "Unmute" : "Mute"}
-          >
-            {isMuted ? <VolumeX className="size-4 text-rose-400" /> : <Volume2 className="size-4" />}
-          </button>
-
-          <span className="text-xs text-zinc-400 font-mono hidden sm:inline">LIVE</span>
+      {/* Top Left Live Badge - Hidden in ReelMode since ReelView handles it */}
+      {!isReelMode && (
+        <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
+          <Badge className="border-rose-500/40 bg-rose-600/20 text-rose-200 backdrop-blur-md">
+            <Radio className="mr-1.5 size-3 animate-pulse text-rose-400" />
+            LIVE · {viewers.toLocaleString()} watching
+          </Badge>
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-white/10 px-2 py-1 text-[10px] font-semibold text-zinc-300">
-            1080p60
-          </span>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center text-zinc-400 hover:text-white"
-            aria-label="Stream Settings"
-          >
-            <Settings className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="flex size-8 items-center justify-center text-zinc-400 hover:text-white"
-            aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-          >
-            {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
-          </button>
-        </div>
+      {/* Controls */}
+      <div className={`absolute z-20 flex items-center gap-2 ${isReelMode ? "right-4 top-12 sm:top-6" : "right-4 top-4"}`}>
+        <button
+          type="button"
+          onClick={() => setIsMuted(!isMuted)}
+          className="flex size-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md hover:bg-black/60 transition"
+          aria-label={isMuted ? "Unmute" : "Mute"}
+        >
+          {isMuted ? <VolumeX className="size-5 text-rose-400" /> : <Volume2 className="size-5" />}
+        </button>
       </div>
     </div>
   );

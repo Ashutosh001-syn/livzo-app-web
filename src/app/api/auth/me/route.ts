@@ -16,15 +16,25 @@ export async function GET() {
   try {
     const cookieStore = await getRequestCookieStore();
     const authService = new AuthService({ cookies: cookieStore });
-    const user = await authService.getCurrentUser();
-
-    if (!user) {
-      return response(null, null, 200);
+    
+    // Skip the getCurrentUser abstraction and fetch directly from DB to avoid double-querying
+    const accessToken = cookieStore.get("livzo.access");
+    if (!accessToken) return response(null, null, 200);
+    
+    let userId;
+    try {
+      const claims = authService.verifyAccessToken(accessToken);
+      userId = claims.sub;
+    } catch {
+      // Fallback if access token is invalid, authService will handle refresh
+      const user = await authService.getCurrentUser();
+      if (!user) return response(null, null, 200);
+      userId = user.id;
     }
 
     const userRepository = new UserRepository();
-    const fullUser = await userRepository.findById(user.id);
-    if (!fullUser) {
+    const fullUser = await userRepository.findById(userId);
+    if (!fullUser || fullUser.disabledAt) {
       return response(null, null, 200);
     }
 

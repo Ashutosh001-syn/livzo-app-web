@@ -131,21 +131,24 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<AuthResult> {
-    // ADMIN BYPASS LOGIC
-    if (input.email === "8888888888" && input.password === "1234") {
-      let adminUser = await this.users.findByEmail("admin@livzo.com");
-      if (!adminUser) {
-        // Manually bypassing repository strictly for admin creation to inject phone if repository doesn't support it yet
-        // Wait, users.create in repository might throw if input type doesn't have phone. 
-        // Let's use prisma directly for the bypass to avoid TS errors or missing fields.
-        adminUser = await prisma.user.create({
+    // TEST BYPASS CREDENTIALS
+    const isHostTest = input.email === "host@livzo.com" && input.password === "1234";
+    const isViewerTest = input.email === "viewer@livzo.com" && input.password === "1234";
+    const isAdminTest = input.email === "8888888888" && input.password === "1234";
+
+    if (isHostTest || isViewerTest || isAdminTest) {
+      const emailToUse = isAdminTest ? "admin@livzo.com" : input.email;
+      let testUser = await this.users.findByEmail(emailToUse);
+      
+      if (!testUser) {
+        testUser = await prisma.user.create({
           data: {
-            email: "admin@livzo.com",
-            phone: "8888888888",
-            displayName: "System Admin",
-            handle: "admin",
+            email: emailToUse,
+            phone: isAdminTest ? "8888888888" : isHostTest ? "host123" : "viewer123",
+            displayName: isAdminTest ? "System Admin" : isHostTest ? "Test Host" : "Test Viewer",
+            handle: isAdminTest ? "admin" : isHostTest ? "testhost" : "testviewer",
             passwordHash: await this.passwordService.hash("1234"),
-            role: "admin"
+            role: isAdminTest ? "admin" : "user"
           }
         });
       }
@@ -153,24 +156,22 @@ export class AuthService {
       const sessionTtl = authConfig.sessionTtlSeconds;
       const expiresAt = this.addSeconds(this.now(), sessionTtl);
       const sessionId = randomUUID();
-      const refreshToken = this.signRefreshToken(adminUser.id, adminUser.tokenVersion, expiresAt, sessionId);
+      const refreshToken = this.signRefreshToken(testUser.id, testUser.tokenVersion, expiresAt, sessionId);
       
       const session = await this.sessions.create({
         id: sessionId,
-        userId: adminUser.id,
+        userId: testUser.id,
         refreshTokenHash: this.hashOpaqueToken(refreshToken),
         userAgent: input.userAgent,
         ipHash: input.ipHash,
         expiresAt,
       });
 
-      // Force ADMIN role on the returned user
-      const authUser = this.toAuthenticatedUser(adminUser, session.id);
-      authUser.role = "admin";
+      const authUser = this.toAuthenticatedUser(testUser, session.id);
+      if (isAdminTest) authUser.role = "admin";
       
-      // We must sign a token with the admin role explicitly since we might not have updated DB role yet
       const accessToken = jwt.sign(
-        { sub: adminUser.id, role: "admin", sessionId, type: "access" },
+        { sub: testUser.id, role: authUser.role, sessionId, type: "access" },
         this.requireEnv("AUTH_JWT_SECRET"),
         { algorithm: "HS256", expiresIn: authConfig.accessTokenTtlSeconds },
       );

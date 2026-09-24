@@ -67,6 +67,36 @@ app.prepare().then(() => {
       });
     });
 
+    // --- Photo Gallery Features ---
+    socket.on("join_photo", (photoId) => {
+      socket.join(`photo_${photoId}`);
+      console.log(`Socket ${socket.id} joined photo ${photoId}`);
+    });
+
+    socket.on("leave_photo", (photoId) => {
+      socket.leave(`photo_${photoId}`);
+      console.log(`Socket ${socket.id} left photo ${photoId}`);
+    });
+
+    socket.on("comment_photo", (data) => {
+      // data: { photoId, text, user }
+      io.to(`photo_${data.photoId}`).emit("receive_photo_comment", {
+        id: Date.now().toString(),
+        text: data.text,
+        user: data.user,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socket.on("like_photo", (data) => {
+      // data: { photoId, user }
+      io.to(`photo_${data.photoId}`).emit("receive_photo_like", {
+        id: Date.now().toString(),
+        user: data.user,
+      });
+    });
+
+
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
     });

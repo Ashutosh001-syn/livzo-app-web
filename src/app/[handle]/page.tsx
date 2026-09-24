@@ -4,6 +4,9 @@ import { prisma } from "@/server/db/prisma";
 import { PageFrame } from "@/components/layout/page-frame";
 import { Heart, Image as ImageIcon, MapPin, Users, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuthService } from "@/server/auth/service";
+import { cookies } from "next/headers";
+import { ProfileGallery } from "./profile-gallery";
 
 // The same dummy creators list to match if it's a dummy
 const dummyCreators = [
@@ -23,6 +26,11 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function UserProfilePage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
+  
+  const cookieStore = await cookies();
+  const authService = new AuthService({ cookies: cookieStore });
+  const currentUser = await authService.getCurrentUser();
+  const safeUser = currentUser ? { id: currentUser.id, displayName: currentUser.displayName } : { id: "guest", displayName: "Guest User" };
 
   let user = await prisma.user.findUnique({
     where: { handle },
@@ -59,7 +67,11 @@ export default async function UserProfilePage({ params }: { params: Promise<{ ha
     "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=800&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?q=80&w=800&auto=format&fit=crop",
-  ];
+  ].map((url, index) => ({
+    id: `photo-${index}`,
+    url,
+    initialLikes: Math.floor(Math.random() * 900) + 100
+  }));
 
   return (
     <PageFrame>
@@ -135,26 +147,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ ha
             <ImageIcon className="size-5 text-violet-400" /> Moments & Photos
           </div>
           
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-3 xl:gap-6">
-            {photoGrid.map((url, i) => (
-              <div key={i} className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-zinc-900 cursor-pointer">
-                {/* Fallback pattern while loading */}
-                <div className="absolute inset-0 bg-gradient-to-br from-violet-900/20 to-blue-900/20" />
-                <img 
-                  src={url} 
-                  alt={`Moment ${i + 1}`}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-90 group-hover:opacity-100"
-                />
-                
-                {/* Hover overlay with engagement stats */}
-                <div className="absolute inset-0 flex items-center justify-center gap-6 bg-black/50 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
-                  <div className="flex items-center gap-2 text-lg font-bold text-white">
-                    <Heart className="size-6 fill-rose-500 text-rose-500" /> {Math.floor(Math.random() * 900) + 100}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ProfileGallery photos={photoGrid} currentUser={safeUser} />
         </div>
 
       </div>

@@ -21,19 +21,21 @@ export function ReelView({ stream }: { stream: LiveStream }) {
         {/* Overlay Content */}
         <div className="relative z-20 flex h-full flex-col justify-between">
           {/* Reel Header (Host Info) */}
-          <div className="flex w-full items-center justify-between p-4 pt-12 sm:pt-6">
+          <div className="flex w-full items-start justify-between p-4 pt-12 sm:pt-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-fuchsia-600 to-violet-600 p-[2px]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-fuchsia-600 to-violet-600 p-[2px] shadow-lg">
                 <div className="h-full w-full rounded-full border-2 border-black bg-zinc-800" />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-white shadow-black drop-shadow-md">{stream.hostId.substring(0, 8)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white shadow-black drop-shadow-md">{stream.hostId.substring(0, 8)}</span>
+                  <button className="rounded-full bg-transparent px-2 py-0.5 text-xs font-semibold text-white/90 ring-1 ring-white/30 backdrop-blur-md transition hover:bg-white/10 hover:text-white">
+                    Follow
+                  </button>
+                </div>
                 <span className="text-[11px] font-medium text-rose-400 drop-shadow-md">• LIVE</span>
               </div>
             </div>
-            <button className="rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold text-white backdrop-blur-md shadow-lg transition hover:bg-white/20">
-              Follow
-            </button>
           </div>
 
           {/* Chat and Controls */}
