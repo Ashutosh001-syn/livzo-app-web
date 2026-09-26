@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -24,6 +24,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageFrame } from "@/components/layout/page-frame";
 import { useAuth } from "@/components/providers/auth-provider";
+import { ChatPanel } from "@/components/stream/chat-panel";
+import { useHostWebRTC } from "@/hooks/use-host-webrtc";
 
 export default function StudioPage() {
   const { user } = useAuth();
@@ -35,13 +37,55 @@ export default function StudioPage() {
 
   const [title, setTitle] = useState("Midnight Creative Coding & Beats");
   const [category, setCategory] = useState("creative");
-
-  const [chatMessages, setChatMessages] = useState([
-    { id: "m-1", user: "alex_beats", text: "Studio audio is super crisp today!", time: "just now" },
-    { id: "m-2", user: "dev_sarah", text: "Excited for this session! 🚀", time: "just now" },
-  ]);
-  const [chatInput, setChatInput] = useState("");
   const [copiedKey, setCopiedKey] = useState(false);
+  const [streamId, setStreamId] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Initialize WebRTC P2P Host
+  useHostWebRTC(isLive, streamId, streamRef.current);
+
+  useEffect(() => {
+    async function setupCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        
+        // Sync initial state
+        stream.getVideoTracks().forEach(t => t.enabled = cameraEnabled);
+        stream.getAudioTracks().forEach(t => t.enabled = micEnabled);
+      } catch (err) {
+        console.error("Failed to access camera", err);
+      }
+    }
+    setupCamera();
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []); // Run once on mount
+
+  // Sync track states when toggles change
+  useEffect(() => {
+    if (streamRef.current) {
+      streamRef.current.getVideoTracks().forEach(t => t.enabled = cameraEnabled);
+    }
+  }, [cameraEnabled]);
+
+  useEffect(() => {
+    if (streamRef.current) {
+      streamRef.current.getAudioTracks().forEach(t => t.enabled = micEnabled);
+    }
+  }, [micEnabled]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -49,32 +93,39 @@ export default function StudioPage() {
       interval = setInterval(() => {
         setStreamTime((prev) => prev + 1);
       }, 1000);
+      
+      // Notify backend we are live
+      fetch("/api/streams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, category, isLive: true })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.stream?.id) setStreamId(data.stream.id);
+        })
+        .catch(console.error);
+      
     } else {
       setStreamTime(0);
+      
+      // Only end if we actually have user context (prevents firing on mount)
+      if (user) {
+        fetch("/api/streams", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isLive: false })
+        }).catch(console.error);
+      }
     }
     return () => clearInterval(interval);
-  }, [isLive]);
+  }, [isLive, title, category, user]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `m-${Date.now()}`,
-        user: user?.handle ?? "you (host)",
-        text: chatInput,
-        time: "just now",
-      },
-    ]);
-    setChatInput("");
   };
 
   return (
@@ -127,26 +178,20 @@ export default function StudioPage() {
           {/* Left Column: Video stage & controls */}
           <div className="space-y-6">
             {/* Monitor Stage */}
-            <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-violet-950/80 via-zinc-950 to-blue-950/60 shadow-2xl">
-              {cameraEnabled ? (
-                <div className="relative flex size-full items-center justify-center">
-                  {/* Visual test pattern animation */}
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(139,92,246,0.2),transparent_60%)]" />
-                  <div className="text-center">
-                    <div className="relative mx-auto flex size-20 items-center justify-center rounded-full border border-white/20 bg-gradient-to-br from-violet-500 to-blue-600 shadow-xl">
-                      <Camera className="size-8 text-white" />
-                    </div>
-                    <p className="mt-4 font-semibold text-white">Camera Preview Active</p>
-                    <p className="mt-1 text-xs text-zinc-400">
-                      {isLive ? "Broadcasting live to LivZo network" : "Ready to transmit"}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex size-full items-center justify-center text-center">
+            <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted // Always muted locally so the host doesn't hear themselves
+                className={`absolute inset-0 size-full object-cover transition-opacity duration-300 ${cameraEnabled ? 'opacity-100' : 'opacity-0'}`}
+              />
+              
+              {!cameraEnabled && (
+                <div className="absolute inset-0 flex size-full items-center justify-center bg-gradient-to-br from-violet-950/80 via-zinc-950 to-blue-950/60 text-center">
                   <div>
                     <VideoOff className="mx-auto size-12 text-zinc-600" />
-                    <p className="mt-2 text-sm text-zinc-500">Camera preview is paused</p>
+                    <p className="mt-2 text-sm text-zinc-500">Camera is off</p>
                   </div>
                 </div>
               )}
@@ -272,41 +317,9 @@ export default function StudioPage() {
             </Card>
 
             {/* Live Chat Panel for Host */}
-            <Card className="flex flex-col h-[460px] p-4">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 font-semibold text-white text-sm">
-                <div className="flex items-center gap-2">
-                  <Users className="size-4 text-violet-300" />
-                  Room Chat
-                </div>
-                <span className="text-xs text-zinc-500">{chatMessages.length} messages</span>
-              </div>
-
-              {/* Chat messages */}
-              <div className="flex-1 space-y-3 overflow-y-auto py-3 pr-1 text-xs">
-                {chatMessages.map((msg) => (
-                  <div key={msg.id} className="rounded-lg bg-white/[0.03] p-2.5">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-semibold text-violet-300">@{msg.user}</span>
-                      <span className="text-zinc-600">{msg.time}</span>
-                    </div>
-                    <p className="mt-1 text-zinc-200">{msg.text}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Host chat input */}
-              <form onSubmit={handleSendMessage} className="mt-2 flex gap-2 pt-2 border-t border-white/10">
-                <Input
-                  className="h-10 text-xs"
-                  placeholder="Chat with your room as host..."
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                />
-                <Button type="submit" className="h-10 px-3 bg-violet-600 text-white hover:bg-violet-500">
-                  <Send className="size-4" />
-                </Button>
-              </form>
-            </Card>
+            <div className="h-[460px]">
+              <ChatPanel roomId={streamId ?? "global"} />
+            </div>
           </div>
         </div>
       </main>

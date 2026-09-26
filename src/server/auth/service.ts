@@ -148,7 +148,7 @@ export class AuthService {
             displayName: isAdminTest ? "System Admin" : isHostTest ? "Test Host" : "Test Viewer",
             handle: isAdminTest ? "admin" : isHostTest ? "testhost" : "testviewer",
             passwordHash: await this.passwordService.hash("1234"),
-            role: isAdminTest ? "admin" : "user"
+            role: isAdminTest ? "admin" : isHostTest ? "host" : "user"
           }
         });
       }
@@ -169,6 +169,7 @@ export class AuthService {
 
       const authUser = this.toAuthenticatedUser(testUser, session.id);
       if (isAdminTest) authUser.role = "admin";
+      if (isHostTest) authUser.role = "host";
       
       const accessToken = jwt.sign(
         { sub: testUser.id, role: authUser.role, sessionId, type: "access" },
@@ -325,6 +326,7 @@ export class AuthService {
         const refreshed = await this.refreshSession({ refreshToken });
         return refreshed.user;
       } catch {
+        this.clearAuthCookies();
         return null;
       }
     }

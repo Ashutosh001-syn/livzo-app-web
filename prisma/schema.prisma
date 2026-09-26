@@ -27,6 +27,7 @@ model User {
   coins             Int                     @default(0)
   giftsSent         GiftTransaction[]       @relation("GiftsSent")
   giftsReceived     GiftTransaction[]       @relation("GiftsReceived")
+  streams           Stream[]
 
   @@map("users")
 }
@@ -115,4 +116,22 @@ model GiftTransaction {
   @@index([senderId])
   @@index([receiverId])
   @@map("gift_transactions")
+}
+
+model Stream {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  title       String
+  category    String    @default("creative")
+  isLive      Boolean   @default(false) @map("is_live")
+  startedAt   DateTime? @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  viewerCount Int       @default(0) @map("viewer_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isLive])
+  @@map("streams")
 }

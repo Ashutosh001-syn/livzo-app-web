@@ -14,6 +14,7 @@ import {
 
 import type { LiveStream } from "@/types/stream";
 import { Badge } from "@/components/ui/badge";
+import { useViewerWebRTC } from "@/hooks/use-viewer-webrtc";
 
 export function VideoStage({ stream, isReelMode }: { stream: LiveStream; isReelMode?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,6 +24,15 @@ export function VideoStage({ stream, isReelMode }: { stream: LiveStream; isReelM
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [viewers, setViewers] = useState(stream.viewerCount);
   const [showControls, setShowControls] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const { remoteStream } = useViewerWebRTC(stream.id);
+
+  useEffect(() => {
+    if (videoRef.current && remoteStream) {
+      videoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
 
   // Gentle realistic viewer count variation
   useEffect(() => {
@@ -56,6 +66,16 @@ export function VideoStage({ stream, isReelMode }: { stream: LiveStream; isReelM
       {/* Dynamic ambient stage glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(139,92,246,0.22),transparent_65%)]" />
 
+      {remoteStream ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted={isMuted}
+          className="absolute inset-0 size-full object-cover"
+        />
+      ) : (
+      <>
       {/* Simulated Live Broadcast Graphic Animation */}
       <div className="relative flex flex-col items-center justify-center text-center select-none">
         <div
@@ -78,6 +98,8 @@ export function VideoStage({ stream, isReelMode }: { stream: LiveStream; isReelM
         </p>
         <p className="mt-0.5 text-[11px] text-zinc-400">1080p 60fps · Low Latency Engine</p>
       </div>
+      </>
+      )}
 
       {/* Top Left Live Badge - Hidden in ReelMode since ReelView handles it */}
       {!isReelMode && (

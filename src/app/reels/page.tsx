@@ -1,18 +1,55 @@
 import { ReelView } from "@/components/stream/reel-view";
+import { PrismaClient } from "@prisma/client";
 
-export default function ReelsPage() {
-  // Generate a list of mock streams
-  const streams = Array.from({ length: 10 }).map((_, i) => ({
-    id: `live-room-${i}`,
-    hostId: ["dj_neon_vibes", "luna_x", "zfox_live", "mia_b", "jcarter", "aria_w"][i % 6] + (i > 5 ? `_${i}` : ""),
-    title: `Amazing Live Stream ${i + 1}`,
-    viewerCount: Math.floor(Math.random() * 5000) + 100, // Random viewers between 100 and 5100
-    status: "LIVE" as const,
-    startedAt: new Date(Date.now() - Math.random() * 10000000).toISOString(),
+export const dynamic = "force-dynamic";
+
+const prisma = new PrismaClient();
+
+export default async function ReelsPage() {
+  // Fetch active streams from the database
+  const activeStreams = await prisma.stream.findMany({
+    where: { isLive: true },
+    include: {
+      user: true,
+    },
+    orderBy: { viewerCount: "desc" },
+  });
+
+  // Map to the format expected by the frontend
+  const streams = activeStreams.map((s) => ({
+    id: s.id,
+    slug: s.id,
+    title: s.title,
+    category: s.category as any,
+    viewerCount: s.viewerCount,
+    isLive: s.isLive,
+    hostId: s.user.handle,
+    tags: [],
+    creator: {
+      id: s.user.id,
+      handle: s.user.handle,
+      displayName: s.user.displayName,
+    }
   }));
 
-  // Sort streams by viewer count (highest to lowest)
-  streams.sort((a, b) => b.viewerCount - a.viewerCount);
+  // If there are no live streams, we can provide a dummy one for UI showcase
+  if (streams.length === 0) {
+    streams.push({
+      id: "dummy-room",
+      slug: "dummy-room",
+      title: "Waiting for creators to go live...",
+      category: "creative" as any,
+      viewerCount: 0,
+      isLive: true,
+      hostId: "system",
+      tags: [],
+      creator: {
+        id: "sys",
+        handle: "system",
+        displayName: "LivZo System",
+      }
+    });
+  }
 
   return (
     <main className="fixed inset-0 w-full bg-black overflow-y-auto snap-y snap-mandatory scroll-smooth hide-scrollbar touch-pan-y">

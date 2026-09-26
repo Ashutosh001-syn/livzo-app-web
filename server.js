@@ -67,6 +67,37 @@ app.prepare().then(() => {
       });
     });
 
+    // --- WebRTC P2P Signaling ---
+    // When a viewer joins, they tell the host they are ready to receive video
+    socket.on("viewer_joined", (roomId) => {
+      // Broadcast to the room (which includes the host) that a viewer joined and needs an offer
+      socket.to(roomId).emit("viewer_ready", { viewerSocketId: socket.id });
+    });
+
+    socket.on("webrtc_offer", (data) => {
+      // Host sends offer to a specific viewer
+      io.to(data.target).emit("webrtc_offer", {
+        sdp: data.sdp,
+        sender: socket.id,
+      });
+    });
+
+    socket.on("webrtc_answer", (data) => {
+      // Viewer sends answer back to host
+      io.to(data.target).emit("webrtc_answer", {
+        sdp: data.sdp,
+        sender: socket.id,
+      });
+    });
+
+    socket.on("webrtc_ice_candidate", (data) => {
+      // Exchange ICE candidates between host and viewer
+      io.to(data.target).emit("webrtc_ice_candidate", {
+        candidate: data.candidate,
+        sender: socket.id,
+      });
+    });
+
     // --- Photo Gallery Features ---
     socket.on("join_photo", (photoId) => {
       socket.join(`photo_${photoId}`);
